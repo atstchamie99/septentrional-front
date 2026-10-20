@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120" fill="none">
+  <!-- Région Maritime (Sud du Togo / Lomé) -->
+  <path d="M15 20 H85 L75 80 L50 105 L25 80 Z" 
+        stroke="#0f172a" 
+        stroke-width="3" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" 
+        fill="rgba(15, 23, 42, 0.06)" />
+  <circle cx="50" cy="85" r="5" fill="#dc2626" />
+</svg>

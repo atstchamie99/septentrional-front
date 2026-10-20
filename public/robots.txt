@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /management/
+
+Sitemap: https://api.septentrional.tg/api/v2/sitemap.xml

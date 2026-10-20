@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120" fill="none">
+  <!-- Région de la Kara -->
+  <path d="M20 20 H80 L85 70 L55 95 L25 80 L15 50 Z" 
+        stroke="#0f172a" 
+        stroke-width="3" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" 
+        fill="rgba(15, 23, 42, 0.06)" />
+  <circle cx="55" cy="55" r="5" fill="#dc2626" />
+</svg>
