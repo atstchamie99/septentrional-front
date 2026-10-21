@@ -1,7 +1,9 @@
-name: Déployer le frontend live
+name: Vérifier le frontend live
 
 on:
   push:
+    branches: [live]
+  pull_request:
     branches: [live]
   workflow_dispatch:
 
@@ -9,22 +11,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: septentrional-frontend-live
-  cancel-in-progress: false
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  deploy:
-    name: Construire et déployer
+  verify:
+    name: TypeScript et build
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment:
-      name: live
-      url: https://front.septentrional.tg
-    env:
-      DEPLOY_HOST: hathor.o2switch.net
-      DEPLOY_PORT: "22"
-      DEPLOY_USER: ${{ vars.DEPLOY_USER }}
-      DEPLOY_BASE_PATH: /home/${{ vars.DEPLOY_USER }}/apps/septentrional-front
 
     steps:
       - name: Récupérer le code
@@ -39,126 +33,11 @@ jobs:
       - name: Installer les dépendances
         run: npm ci
 
-      - name: Construire le frontend
+      - name: Vérifier TypeScript
+        run: npm run type-check
+
+      - name: Vérifier le build de production
         env:
           VITE_API_URL: https://api.septentrional.tg/api/v2
-          VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
-        run: |
-          test -n "$VITE_API_KEY" || {
-            echo "Le secret VITE_API_KEY est absent de l'environnement GitHub live."
-            exit 1
-          }
-          npm run build
-
-      - name: Vérifier la configuration de déploiement
-        run: |
-          [[ "$DEPLOY_HOST" =~ ^[A-Za-z0-9.-]+$ ]] || exit 1
-          [[ "$DEPLOY_PORT" =~ ^[0-9]+$ ]] || exit 1
-          [[ "$DEPLOY_USER" =~ ^[A-Za-z0-9._-]+$ ]] || exit 1
-          [[ "$DEPLOY_BASE_PATH" =~ ^/[A-Za-z0-9._/-]+$ ]] || exit 1
-
-      - name: Autoriser temporairement le runner chez o2switch
-        env:
-          CPANEL_API_TOKEN: ${{ secrets.CPANEL_API_TOKEN }}
-        run: |
-          set -Eeuo pipefail
-          test -n "$CPANEL_API_TOKEN" || {
-            echo "Le secret CPANEL_API_TOKEN est absent de l'environnement GitHub live."
-            exit 1
-          }
-          runner_ip="$(curl -4fsS --max-time 20 https://api.ipify.org)"
-          [[ "$runner_ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || exit 1
-          printf 'RUNNER_IP=%s\n' "$runner_ip" >> "$GITHUB_ENV"
-          response="$(curl -fsS --max-time 50 \
-            -H "Authorization: cpanel $DEPLOY_USER:$CPANEL_API_TOKEN" \
-            "https://$DEPLOY_HOST:2083/execute/SshWhitelist/add?address=$runner_ip&port=$DEPLOY_PORT")"
-          jq -e '.status == 1' <<< "$response" >/dev/null
-
-      - name: Configurer la clé SSH
-        env:
-          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
-          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
-        run: |
-          test -n "$DEPLOY_SSH_PRIVATE_KEY" || exit 1
-          test -n "$DEPLOY_SSH_KNOWN_HOSTS" || exit 1
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
-          printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
-
-      - name: Préparer la release distante
-        run: |
-          ssh -p "$DEPLOY_PORT" -o BatchMode=yes -o IdentitiesOnly=yes \
-            "$DEPLOY_USER@$DEPLOY_HOST" bash -s -- \
-            "$DEPLOY_BASE_PATH" "$GITHUB_SHA" <<'REMOTE'
-          set -Eeuo pipefail
-          base="$1"
-          release="$base/releases/$2"
-          mkdir -p "$release"
-          REMOTE
-
-      - name: Envoyer les fichiers construits
-        run: |
-          rsync -az --delete \
-            -e "ssh -p $DEPLOY_PORT -o BatchMode=yes -o IdentitiesOnly=yes" \
-            dist/ \
-            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_BASE_PATH/releases/$GITHUB_SHA/"
-
-      - name: Activer la release
-        id: release
-        run: |
-          previous="$({
-            ssh -p "$DEPLOY_PORT" -o BatchMode=yes -o IdentitiesOnly=yes \
-              "$DEPLOY_USER@$DEPLOY_HOST" bash -s -- \
-              "$DEPLOY_BASE_PATH" "$GITHUB_SHA" <<'REMOTE'
-          set -Eeuo pipefail
-          base="$1"
-          release="$base/releases/$2"
-          test -f "$release/index.html"
-          previous=""
-          if [[ -L "$base/current" ]]; then
-            previous="$(readlink -f "$base/current")"
-          fi
-          ln -sfn "$release" "$base/current.next"
-          mv -Tf "$base/current.next" "$base/current"
-          printf '%s' "$previous"
-          REMOTE
-          } 2>/dev/null)"
-          echo "previous=$previous" >> "$GITHUB_OUTPUT"
-
-      - name: Vérifier le site
-        run: |
-          curl --fail --location --silent --show-error \
-            --retry 5 --retry-delay 3 --retry-all-errors \
-            https://front.septentrional.tg/
-
-      - name: Restaurer la release précédente en cas d'échec
-        if: ${{ failure() && steps.release.outputs.previous != '' }}
-        env:
-          PREVIOUS_RELEASE: ${{ steps.release.outputs.previous }}
-        run: |
-          ssh -p "$DEPLOY_PORT" -o BatchMode=yes -o IdentitiesOnly=yes \
-            "$DEPLOY_USER@$DEPLOY_HOST" bash -s -- \
-            "$DEPLOY_BASE_PATH" "$PREVIOUS_RELEASE" <<'REMOTE'
-          set -Eeuo pipefail
-          base="$1"
-          previous="$2"
-          case "$previous" in
-            "$base"/releases/*) ;;
-            *) exit 1 ;;
-          esac
-          test -f "$previous/index.html"
-          ln -sfn "$previous" "$base/current.next"
-          mv -Tf "$base/current.next" "$base/current"
-          REMOTE
-
-      - name: Retirer l'autorisation SSH temporaire
-        if: ${{ always() && env.RUNNER_IP != '' }}
-        env:
-          CPANEL_API_TOKEN: ${{ secrets.CPANEL_API_TOKEN }}
-        run: |
-          for direction in in out; do
-            curl -fsS --max-time 50 \
-              -H "Authorization: cpanel $DEPLOY_USER:$CPANEL_API_TOKEN" \
-              "https://$DEPLOY_HOST:2083/execute/SshWhitelist/remove?address=$RUNNER_IP&port=$DEPLOY_PORT&direction=$direction" || true
-          done
+          VITE_API_KEY: ci-validation-key
+        run: npm run build
