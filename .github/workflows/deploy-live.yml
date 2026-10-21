@@ -1,10 +1,10 @@
-name: Vérifier le frontend live
+name: Tester et publier le frontend live
 
 on:
   push:
-    branches: [live]
+    branches: [dev, live]
   pull_request:
-    branches: [live]
+    branches: [dev, live]
   workflow_dispatch:
 
 permissions:
@@ -12,32 +12,75 @@ permissions:
 
 concurrency:
   group: frontend-ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  verify:
-    name: TypeScript et build
+  test:
+    name: Tests et build frontend
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
-      - name: Récupérer le code
-        uses: actions/checkout@v4
-
-      - name: Installer Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
         with:
-          node-version: "20.20.0"
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
           cache: npm
-
-      - name: Installer les dépendances
+      - name: Installer les dependances
         run: npm ci
-
-      - name: Vérifier TypeScript
-        run: npm run type-check
-
-      - name: Vérifier le build de production
+      - name: Verifier le code
+        run: |
+          npm run type-check
+          npm test -- --runInBand
+      - name: Construire le paquet live
+        if: github.ref == 'refs/heads/live' && github.event_name != 'pull_request'
         env:
           VITE_API_URL: https://api.septentrional.tg/api/v2
-          VITE_API_KEY: ci-validation-key
-        run: npm run build
+          VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$VITE_API_KEY"
+          npm run build
+          tar -C dist -czf "$RUNNER_TEMP/release.tar.gz" .
+          cp scripts/deploy/server.sh "$RUNNER_TEMP/server.sh"
+      - uses: actions/upload-artifact@v4
+        if: github.ref == 'refs/heads/live' && github.event_name != 'pull_request'
+        with:
+          name: frontend-live-release
+          path: |
+            ${{ runner.temp }}/release.tar.gz
+            ${{ runner.temp }}/server.sh
+          retention-days: 7
+
+  publish:
+    name: Publier le paquet valide
+    needs: test
+    if: github.ref == 'refs/heads/live' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-live-release
+          path: release
+      - uses: actions/checkout@v4
+        with:
+          ref: live
+          path: source
+      - name: Publier la branche technique live-build
+        run: |
+          set -euo pipefail
+          cd source
+          [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]] || exit 0
+          git switch --orphan live-build
+          cp ../release/release.tar.gz ../release/server.sh .
+          printf '%s\n' "$GITHUB_SHA" > revision
+          sha256sum release.tar.gz > SHA256SUMS
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add release.tar.gz server.sh revision SHA256SUMS
+          git commit -m "Tested frontend live release $GITHUB_SHA"
+          git push --force origin HEAD:live-build
