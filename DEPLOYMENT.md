@@ -15,11 +15,10 @@ Créer un environnement GitHub nommé `live`, puis y définir :
 
 ### Variables
 
-- `DEPLOY_HOST` : `hathor.o2switch.net` ;
-- `DEPLOY_PORT` : `22` ;
-- `DEPLOY_USER` : utilisateur cPanel/o2switch ;
-- `DEPLOY_BASE_PATH` : `/home/UTILISATEUR/apps/septentrional-front` ;
-- `VITE_API_URL` : `https://api.septentrional.tg/api/v2`.
+- `DEPLOY_USER` : utilisateur cPanel/o2switch.
+
+L'hôte, le port, le chemin de déploiement et l'URL de l'API sont déjà définis
+dans le workflow.
 
 Dans cPanel, la racine de `front.septentrional.tg` doit être :
 

@@ -21,10 +21,10 @@ jobs:
       name: live
       url: https://front.septentrional.tg
     env:
-      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
-      DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '22' }}
+      DEPLOY_HOST: hathor.o2switch.net
+      DEPLOY_PORT: "22"
       DEPLOY_USER: ${{ vars.DEPLOY_USER }}
-      DEPLOY_BASE_PATH: ${{ vars.DEPLOY_BASE_PATH }}
+      DEPLOY_BASE_PATH: /home/${{ vars.DEPLOY_USER }}/apps/septentrional-front
 
     steps:
       - name: Récupérer le code
@@ -41,7 +41,7 @@ jobs:
 
       - name: Construire le frontend
         env:
-          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://api.septentrional.tg/api/v2' }}
+          VITE_API_URL: https://api.septentrional.tg/api/v2
           VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
         run: |
           test -n "$VITE_API_KEY" || {
