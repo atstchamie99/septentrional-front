@@ -91,11 +91,18 @@ ServerSignature Off
   RewriteEngine On
   RewriteBase /
 
-  # 1. HTTPS obligatoire + domaine canonique sans www (cohérent avec les
-  #    URLs absolues utilisées partout dans le SEO : https://septentrional.tg)
-  RewriteCond %{HTTPS} off [OR]
+  # 1. Domaines canoniques. L'environnement de test front.septentrional.tg
+  #    doit rester sur son propre hôte et ne jamais basculer vers la production.
   RewriteCond %{HTTP_HOST} ^www\.septentrional\.tg$ [NC]
   RewriteRule ^ https://septentrional.tg%{REQUEST_URI} [L,R=301]
+
+  RewriteCond %{HTTP_HOST} ^www\.front\.septentrional\.tg$ [NC]
+  RewriteRule ^ https://front.septentrional.tg%{REQUEST_URI} [L,R=301]
+
+  # HTTPS obligatoire en conservant uniquement un hôte explicitement autorisé.
+  RewriteCond %{HTTPS} off
+  RewriteCond %{HTTP_HOST} ^(?:front\.)?septentrional\.tg$ [NC]
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
   # 2. Ignorer les requêtes destinées à l'API backend Laravel (/api/v2/*,
   #    et toute version future : le préfixe /api/ suffit à les exclure)

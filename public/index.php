@@ -8,7 +8,11 @@
  */
 
 $apiBaseUrl = getenv('SEPTENTRIONAL_API_URL') ?: 'https://api.septentrional.tg/api/v2/seo';
-$siteUrl = getenv('SEPTENTRIONAL_SITE_URL') ?: 'https://www.septentrional.tg';
+$requestHost = strtolower((string) preg_replace('/:\\d+$/', '', $_SERVER['HTTP_HOST'] ?? ''));
+$defaultSiteUrl = $requestHost === 'front.septentrional.tg'
+    ? 'https://front.septentrional.tg'
+    : 'https://septentrional.tg';
+$siteUrl = getenv('SEPTENTRIONAL_SITE_URL') ?: $defaultSiteUrl;
 $indexFile  = __DIR__ . '/index.html';
 
 // Clé API exigée par le backend sur toutes les routes /api/v2/*, y compris
