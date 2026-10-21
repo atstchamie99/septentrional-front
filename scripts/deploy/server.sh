@@ -12,8 +12,10 @@ revision=${4:?Revision required}
 for binary in tar curl flock; do command -v "$binary" >/dev/null; done
 test -f "$archive"
 
+umask 022
 mkdir -p "$app_base/releases"
 app_base=$(cd "$app_base" && pwd -P)
+chmod 711 "$app_base" "$app_base/releases"
 exec 9>"$app_base/deploy.lock"
 flock -n 9 || { echo 'Another frontend deployment is running.' >&2; exit 1; }
 
@@ -25,7 +27,6 @@ fi
 
 rm -rf "$release"
 mkdir -p "$release"
-umask 022
 tar -xzf "$archive" -C "$release"
 test -f "$release/index.html"
 find "$release" -type d -exec chmod 755 {} +
