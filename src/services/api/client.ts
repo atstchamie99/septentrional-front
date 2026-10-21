@@ -9,16 +9,16 @@ import {
   ADMIN_LOGIN_PATH,
   isPublicAdminAuthPath,
 } from '@app/routes/authRoutes'
+import { VITE_API_KEY, VITE_API_URL } from '@app/environment'
 import { resolveRequestUrl } from './url'
 
-export const API_URL =
-  import.meta.env.VITE_API_URL || '/api/v2'
+export const API_URL = VITE_API_URL
 
 // Clé d'identification de l'application (pas un secret : visible dans le
 // bundle par construction). Sert à exiger un header explicite côté API pour
 // filtrer les clients qui n'intègrent pas le site, pas à authentifier un
 // utilisateur — ça reste le rôle du token Sanctum en cookie HttpOnly.
-const API_KEY = import.meta.env.VITE_API_KEY || ''
+const API_KEY = VITE_API_KEY
 
 const isFormData = (data: unknown) =>
   typeof FormData !== 'undefined' && data instanceof FormData

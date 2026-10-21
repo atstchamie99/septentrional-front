@@ -5,6 +5,7 @@ export default {
   testMatch: ['**/__tests__/**/*.ts?(x)', '**/?(*.)+(spec|test).ts?(x)'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
+    '^@app/environment$': '<rootDir>/src/test/environment.ts',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@app/(.*)$': '<rootDir>/src/app/$1',
     '^@features/(.*)$': '<rootDir>/src/features/$1',

@@ -133,21 +133,8 @@ export const sanitizeEditorialStyle = (style: string): string => (
       if (separatorIndex < 1) return null
 
       const property = declaration.slice(0, separatorIndex).trim().toLowerCase()
-      // Autoriser plus de propriétés CSS courantes
       const rawValue = declaration.slice(separatorIndex + 1).trim()
-      
-      if (['font-size', 'min-width', 'width', 'max-width', 'height', 'margin', 'padding', 'margin-top', 'margin-bottom', 'margin-left', 'margin-right'].includes(property)) {
-        return `${property}: ${rawValue}`
-      }
-
-      if (property === 'color' || property === 'background-color' || property === 'background') {
-        return `${property}: ${rawValue}` // On accepte toutes les couleurs pour éviter de casser le style collé
-      }
-
-      const safeValue = sanitizeStyleDeclaration(
-        property,
-        rawValue,
-      )
+      const safeValue = sanitizeStyleDeclaration(property, rawValue)
 
       return safeValue ? `${property}: ${safeValue}` : null
     })

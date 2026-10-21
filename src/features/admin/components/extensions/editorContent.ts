@@ -163,15 +163,6 @@ export const normalizeSafeLink = (value: string): string | null => {
     if (url.protocol === 'tel:' && !url.pathname) return null
     return candidate
   } catch {
-    // Si l'URL n'a pas de protocole (ex: "google.com"), on tente d'ajouter "https://"
-    if (!candidate.includes('://') && !candidate.startsWith('mailto:') && !candidate.startsWith('tel:')) {
-      try {
-        const url = new URL(`https://${candidate}`)
-        return url.href
-      } catch {
-        return null
-      }
-    }
     return null
   }
 }
