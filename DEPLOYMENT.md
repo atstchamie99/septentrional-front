@@ -11,6 +11,8 @@ Créer un environnement GitHub nommé `live`, puis y définir :
 
 - `DEPLOY_SSH_PRIVATE_KEY` : clé privée SSH dédiée à GitHub Actions ;
 - `DEPLOY_SSH_KNOWN_HOSTS` : ligne `known_hosts` vérifiée du serveur o2switch ;
+- `CPANEL_API_TOKEN` : jeton API cPanel utilisé pour autoriser temporairement
+  l'adresse IP du runner GitHub sur le port SSH ;
 - `VITE_API_KEY` : clé publique d'application attendue par l'API.
 
 ### Variables
@@ -19,6 +21,10 @@ Créer un environnement GitHub nommé `live`, puis y définir :
 
 L'hôte, le port, le chemin de déploiement et l'URL de l'API sont déjà définis
 dans le workflow.
+
+Le jeton se crée dans cPanel avec **Sécurité > Gérer les jetons d'API**. Le
+workflow ajoute l'IP du runner à la liste blanche o2switch avant la connexion
+SSH, puis la retire à la fin, y compris si le déploiement échoue.
 
 Dans cPanel, la racine de `front.septentrional.tg` doit être :
 
